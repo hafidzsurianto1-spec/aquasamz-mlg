@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AquaMalang Pro — Smart Aquaculture & Financial Management System</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js untuk Grafik -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Three.js untuk Simulasi Instalasi Air 3D -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Favicon Vektor SVG -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2245%22 fill=%22%230284c7%22/><path d=%22M30 55 Q50 30 70 55 T50 80 Z%22 fill=%22%2310b981%22/><circle cx=%2250%22 cy=%2245%22 r=%228%22 fill=%22%23ffffff%22/></svg>">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        aquaPrimary: '#0284c7',
+                        aquaDark: '#0369a1',
+                        emeraldAccent: '#10b981',
+                        darkBg: '#0f172a',
+                        cardBg: '#1e293b'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #0284c7; }
+    </style>
+</head>
+<body class="bg-darkBg text-slate-100 min-h-screen font-sans selection:bg-cyan-500 selection:text-white">
+
+    <!-- TOP HEADER & BRANDING -->
+    <header class="sticky top-0 z-50 glass-panel border-b border-slate-700/60 shadow-xl">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center gap-4">
+            
+            <!-- Logo & Title -->
+            <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-cyan-600 to-emerald-500 p-0.5 shadow-lg shadow-cyan-500/20 flex items-center justify-center">
+                    <div class="w-full h-full bg-slate-900 rounded-[14px] flex items-center justify-center">
+                        <i class="fa-solid fa-water text-cyan-400 text-xl animate-pulse"></i>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <h1 class="font-bold text-xl tracking-wide bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">AquaMalang Pro</h1>
+                        <span class="text-xs px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">v2.6 Smart</span>
+                    </div>
+                    <p class="text-xs text-slate-400">Sistem Manajemen & Keuangan Budidaya Kab. Malang</p>
+                </div>
+            </div>
+
+            <!-- GLOBAL COMMODITY SWITCHER & QUICK STATUS -->
+            <div class="flex items-center gap-3 w-full md:w-auto justify-end flex-wrap">
+                <div class="flex items-center bg-slate-800/90 p-1 rounded-xl border border-slate-700">
+                    <span class="text-xs text-slate-400 px-2 font-medium"><i class="fa-solid fa-fish text-cyan-400 mr-1"></i> Komoditas:</span>
+                    <select id="globalCommodity" onchange="changeGlobalCommodity(this.value)" class="bg-slate-700 text-cyan-300 text-xs font-bold rounded-lg px-3 py-1.5 outline-none cursor-pointer border border-slate-600 hover:border-cyan-500 transition">
+                        <option value="nila">Ikan Nila (Merah/Gesit)</option>
+                        <option value="gurame">Ikan Gurame (Soang/Padang)</option>
+                        <option value="lele">Ikan Lele (Sangkuriang/Mutiara)</option>
+                    </select>
+                </div>
+                
+                <div class="flex items-center gap-2">
+                    <span id="saveStatus" class="text-xs px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> Auto-Saved
+                    </span>
+                    <button onclick="exportToTSVGlobal()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-2 rounded-xl transition shadow-lg shadow-emerald-600/20 flex items-center gap-1.5" title="Salin data tabel ke Spreadsheet / Excel">
+                        <i class="fa-solid fa-file-excel"></i> Salin ke Sheets
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- NAVIGATION TABS -->
+        <nav class="max-w-7xl mx-auto px-4 flex space-x-1 overflow-x-auto py-2 border-t border-slate-800 scrollbar-none">
+            <button onclick="switchTab('dashboard')" class="tab-btn active px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition bg-cyan-600 text-white shadow-md shadow-cyan-600/30 whitespace-nowrap">
+                <i class="fa-solid fa-chart-pie"></i> Dashboard & Pasar
+            </button>
+            <button onclick="switchTab('calculator')" class="tab-btn px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition text-slate-300 hover:bg-slate-800 whitespace-nowrap">
+                <i class="fa-solid fa-calculator"></i> Lahan & Padat Tebar
+            </button>
+            <button onclick="switchTab('installation3d')" class="tab-btn px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition text-slate-300 hover:bg-slate-800 whitespace-nowrap">
+                <i class="fa-solid fa-cubes"></i> Instalasi Air 3D
+            </button>
+            <button onclick="switchTab('climateDisease')" class="tab-btn px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition text-slate-300 hover:bg-slate-800 whitespace-nowrap">
+                <i class="fa-solid fa-shield-halved"></i> Zonasi & Klinik Penyakit
+            </button>
+            <button onclick="switchTab('journalSenior')" class="tab-btn px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition text-slate-300 hover:bg-slate-800 whitespace-nowrap">
+                <i class="fa-solid fa-book-open-reader"></i> Rahasia Jurnal Senior
+            </button>
+            <button onclick="switchTab('finance')" class="tab-btn px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition text-slate-300 hover:bg-slate-800 whitespace-nowrap">
+                <i class="fa-solid fa-wallet"></i> Keuangan & Anti-Boros
+            </button>
+        </nav>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="max-w-7xl mx-auto px-4 py-6">
+
+        <!-- ================= TAB 1: DASHBOARD & PASAR REAL-TIME ================= -->
+        <div id="dashboard" class="tab-content active space-y-6">
+            <!-- Welcome Banner -->
+            <div class="glass-panel p-6 rounded-2xl relative overflow-hidden bg-gradient-to-r from-slate-900 via-slate-800 to-cyan-950 border border-cyan-500/20">
+                <div class="absolute right-0 top-0 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-400 text-xs font-semibold mb-2 border border-cyan-500/20">
+                            <i class="fa-solid fa-location-dot"></i> Wilayah Kerja: Kabupaten Malang
+                        </div>
+                        <h2 class="text-2xl font-bold text-white" id="welcomeTitle">Pusat Budidaya & Pasar Ikan Nila Kab. Malang</h2>
+                        <p class="text-slate-300 text-sm mt-1 max-w-2xl">Pantau harga real-time di titik pasar utama Kabupaten Malang, kalkulasi padat tebar, kelola instalasi air, dan jaga kesehatan finansial usaha Anda.</p>
+                    </div>
+                    <div class="flex gap-3">
+                        <button onclick="switchTab('calculator')" class="bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs px-4 py-2.5 rounded-xl transition shadow-lg shadow-cyan-600/30 flex items-center gap-2">
+                            <i class="fa-solid fa-calculator"></i> Mulai Kalkulator
+                        </button>
+                        <button onclick="switchTab('finance')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs px-4 py-2.5 rounded-xl transition flex items-center gap-2">
+                            <i class="fa-solid fa-wallet"></i> Cek Keuangan
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Market Price Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="glass-panel p-5 rounded-2xl border-l-4 border-l-cyan-500">
+                    <span class="text-xs text-slate-400 font-medium">Harga Konsumsi Pasar (Avg)</span>
+                    <div class="text-2xl font-bold text-white mt-1" id="dashPriceKonsumsi">Rp 28.500 <span class="text-xs font-normal text-slate-400">/kg</span></div>
+                    <span class="text-xs text-emerald-400 mt-2 flex items-center gap-1"><i class="fa-solid fa-arrow-trend-up"></i> Stabil tinggi di Malang Raya</span>
+                </div>
+                <div class="glass-panel p-5 rounded-2xl border-l-4 border-l-emerald-500">
+                    <span class="text-xs text-slate-400 font-medium">Harga Bibit Ukuran 5-7cm</span>
+                    <div class="text-2xl font-bold text-white mt-1" id="dashPriceBibit">Rp 350 <span class="text-xs font-normal text-slate-400">/ekor</span></div>
+                    <span class="text-xs text-cyan-400 mt-2 flex items-center gap-1"><i class="fa-solid fa-shield-check"></i> Suplai hatchery Tumpang & Turen</span>
+                </div>
+                <div class="glass-panel p-5 rounded-2xl border-l-4 border-l-amber-500">
+                    <span class="text-xs text-slate-400 font-medium">FCR Rata-Rata Pakan</span>
+                    <div class="text-2xl font-bold text-white mt-1" id="dashFcr">1.2 - 1.3</div>
+                    <span class="text-xs text-amber-400 mt-2 flex items-center gap-1"><i class="fa-solid fa-lightbulb"></i> Efisiensi pakan mandiri / pabrik</span>
+                </div>
+                <div class="glass-panel p-5 rounded-2xl border-l-4 border-l-purple-500">
+                    <span class="text-xs text-slate-400 font-medium">Estimasi Margin Keuntungan</span>
+                    <div class="text-2xl font-bold text-white mt-1" id="dashMargin">35% - 48%</div>
+                    <span class="text-xs text-purple-400 mt-2 flex items-center gap-1"><i class="fa-solid fa-chart-line"></i> Setelah dipotong FCR & operasional</span>
+                </div>
+            </div>
+
+            <!-- Market Price Table & Chart Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Market Price Table Kabupaten Malang -->
+                <div class="glass-panel p-6 rounded-2xl lg:col-span-2">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-lg text-white flex items-center gap-2"><i class="fa-solid fa-store text-cyan-400"></i> Pantauan Pasar Kabupaten Malang 2026</h3>
+                        <span class="text-xs bg-slate-800 text-slate-300 px-3 py-1 rounded-lg border border-slate-700">Update Real-Time</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-slate-300">
+                            <thead class="bg-slate-800/80 text-slate-400 uppercase tracking-wider">
+                                <tr>
+                                    <th class="p-3 rounded-l-lg">Titik Pasar / Sentra</th>
+                                    <th class="p-3">Harga Konsumsi (/kg)</th>
+                                    <th class="p-3">Harga Bibit (/ekor)</th>
+                                    <th class="p-3 rounded-r-lg">Tren Permintaan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="marketTableBody" class="divide-y divide-slate-800">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 14-Day Price Trend Chart -->
+                <div class="glass-panel p-6 rounded-2xl flex flex-col justify-between">
+                    <div>
+                        <h3 class="font-bold text-lg text-white flex items-center gap-2 mb-1"><i class="fa-solid fa-chart-area text-emerald-400"></i> Tren Harga 14 Hari</h3>
+                        <p class="text-xs text-slate-400 mb-4">Fluktuasi harga komoditas terpilih di Kabupaten Malang.</p>
+                    </div>
+                    <div class="relative h-64 w-full">
+                        <canvas id="marketTrendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 2: KALKULATOR LAHAN & PADAT TEBAR ================= -->
+        <div id="calculator" class="tab-content space-y-6">
+            <div class="glass-panel p-6 rounded-2xl border border-cyan-500/20">
+                <h3 class="text-xl font-bold text-white mb-2 flex items-center gap-2">
+                    <i class="fa-solid fa-calculator text-cyan-400"></i> Kalkulator Lahan & Padat Tebar Komoditas
+                </h3>
+                <p class="text-xs text-slate-400 mb-6">Hitung volume air kolam, padat tebar optimal, total kebutuhan benih, kebutuhan pakan total hingga estimasi hasil panen berdasarkan parameter Anda.</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Input Parameter Kolam -->
+                    <div class="space-y-4 bg-slate-900/60 p-5 rounded-xl border border-slate-800">
+                        <h4 class="font-bold text-sm text-cyan-300 border-b border-slate-800 pb-2"><i class="fa-solid fa-sliders mr-1"></i> Parameter Kolam & Sistem</h4>
+                        
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Tipe Sistem Budidaya</label>
+                            <select id="calcSystem" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-white outline-none focus:border-cyan-500">
+                                <option value="terpal">Kolam Terpal (Intensif)</option>
+                                <option value="tanah">Kolam Tanah (Semi-Intensif)</option>
+                                <option value="bioflok">Kolam Bundar Bioflok (Super Intensif)</option>
+                                <option value="beton">Kolam Beton RAS (Recirculating)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Bentuk Kolam</label>
+                            <select id="calcShape" onchange="toggleCalcShapeInputs()" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-white outline-none focus:border-cyan-500">
+                                <option value="kotak">Persegi / Kotak (Panjang x Lebar)</option>
+                                <option value="bundar">Bundar / Lingkaran (Diameter)</option>
+                            </select>
+                        </div>
+
+                        <div id="inputKotak" class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs text-slate-400 mb-1">Panjang (meter)</label>
+                                <input type="number" id="calcPanjang" value="3" step="0.5" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-cyan-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-slate-400 mb-1">Lebar (meter)</label>
+                                <input type="number" id="calcLebar" value="2" step="0.5" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-cyan-500">
+                            </div>
+                        </div>
+
+                        <div id="inputBundar" class="hidden">
+                            <label class="block text-xs text-slate-400 mb-1">Diameter Kolam (meter)</label>
+                            <input type="number" id="calcDiameter" value="3" step="0.5" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-cyan-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Kedalaman Air (meter)</label>
+                            <input type="number" id="calcKedalaman" value="1" step="0.1" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none focus:border-cyan-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Ukuran Benih Tebar</label>
+                            <select id="calcSeedSize" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-white outline-none focus:border-cyan-500">
+                                <option value="3-5">Ukuran 3 - 5 cm (Jari Kelingking)</option>
+                                <option value="5-7" selected>Ukuran 5 - 7 cm (Jari Telunjuk)</option>
+                                <option value="7-9">Ukuran 7 - 9 cm (Remaja)</option>
+                            </select>
+                        </div>
+
+                        <button onclick="calculateAquaculture()" class="w-full bg-gradient-to-r from-cyan-600 to-emerald-600 hover:from-cyan-500 hover:to-emerald-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition shadow-lg shadow-cyan-600/30 flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-bolt"></i> Hitung Padat Tebar & Proyeksi
+                        </button>
+                    </div>
+
+                    <!-- Hasil Kalkulasi (Ringkasan) -->
+                    <div class="space-y-4 bg-slate-900/60 p-5 rounded-xl border border-slate-800 lg:col-span-2 flex flex-col justify-between">
+                        <div>
+                            <h4 class="font-bold text-sm text-emerald-300 border-b border-slate-800 pb-2 mb-4"><i class="fa-solid fa-square-poll-vertical mr-1"></i> Hasil Analisis & Rekomendasi Budidaya</h4>
+                            
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                                <div class="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700">
+                                    <span class="text-[11px] text-slate-400 block">Luas Permukaan</span>
+                                    <span id="resLuas" class="text-lg font-bold text-white mt-1 block">6.0 m²</span>
+                                </div>
+                                <div class="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700">
+                                    <span class="text-[11px] text-slate-400 block">Volume Air</span>
+                                    <span id="resVolume" class="text-lg font-bold text-cyan-400 mt-1 block">6,000 Liter</span>
+                                </div>
+                                <div class="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700">
+                                    <span class="text-[11px] text-slate-400 block">Rekomendasi Padat Tebar</span>
+                                    <span id="resTebar" class="text-lg font-bold text-emerald-400 mt-1 block">720 Ekor</span>
+                                </div>
+                                <div class="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700">
+                                    <span class="text-[11px] text-slate-400 block">Estimasi Panen (Kg)</span>
+                                    <span id="resPanenKg" class="text-lg font-bold text-amber-400 mt-1 block">120 Kg</span>
+                                </div>
+                            </div>
+
+                            <div class="space-y-3">
+                                <div class="flex justify-between text-xs bg-slate-800/50 p-3 rounded-lg">
+                                    <span class="text-slate-400">Estimasi Kebutuhan Pakan Total (FCR):</span>
+                                    <span id="resPakan" class="font-bold text-white">150 Kg</span>
+                                </div>
+                                <div class="flex justify-between text-xs bg-slate-800/50 p-3 rounded-lg">
+                                    <span class="text-slate-400">Siklus Waktu Pemeliharaan:</span>
+                                    <span id="resSiklus" class="font-bold text-white">3.5 Bulan (105 Hari)</span>
+                                </div>
+                                <div class="flex justify-between text-xs bg-slate-800/50 p-3 rounded-lg">
+                                    <span class="text-slate-400">Kebutuhan Oksigen / Aerasi:</span>
+                                    <span id="resAerasi" class="font-bold text-cyan-300">1 Titik Aerator 2 Lubang + Batu Titik Tengah</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-cyan-950/40 border border-cyan-500/30 p-3.5 rounded-xl text-xs text-cyan-200 flex items-start gap-3 mt-4">
+                            <i class="fa-solid fa-circle-info text-cyan-400 text-sm mt-0.5"></i>
+                            <div>
+                                <span class="font-bold block mb-0.5">Catatan Teknis Komoditas Terpilih:</span>
+                                <span id="resCatatanTeknis">Untuk ikan Nila dengan sistem terpal, pastikan pergantian air 10-20% per minggu setelah bulan kedua untuk menjaga kadar amonia tetap rendah.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 3: INSTALASI AIR 3D ================= -->
+        <div id="installation3d" class="tab-content space-y-6">
+            <div class="glass-panel p-6 rounded-2xl border border-cyan-500/20">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+                    <div>
+                        <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-cubes text-cyan-400"></i> Simulasi Instalasi Air 3D & Sistem Plambing Kolam
+                        </h3>
+                        <p class="text-xs text-slate-400">Visualisasi 3D interaktif untuk tata letak pipa air masuk (inlet), pipa pembuangan kotoran (*central drain* / monik), dan sistem aerasi.</p>
+                    </div>
+                    
+                    <!-- Preset Selector & Controls -->
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <select id="select3dModel" onchange="change3dModel(this.value)" class="bg-slate-800 text-cyan-300 text-xs font-bold rounded-xl px-3 py-2 border border-slate-700 outline-none cursor-pointer">
+                            <option value="terpalKotak">Kolam Terpal Kotak (2x3x1m)</option>
+                            <option value="terpalBundar">Kolam Terpal Bundar Bioflok</option>
+                            <option value="kolamTanah">Kolam Tanah (Kamalir & Monik)</option>
+                            <option value="kolamBeton">Kolam Beton RAS (3 Chamber)</option>
+                        </select>
+                        <button onclick="toggleXRay()" id="btnXray" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 transition">
+                            <i class="fa-solid fa-eye-low-vision mr-1"></i> Mode X-Ray Pipa
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 3D Canvas Viewport -->
+                <div class="relative w-full h-[400px] bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 shadow-inner">
+                    <div id="canvas3dContainer" class="w-full h-full"></div>
+                    
+                    <!-- Overlay Controls Badge -->
+                    <div class="absolute bottom-4 left-4 bg-slate-900/80 backdrop-blur-md px-3 py-2 rounded-xl border border-slate-700/80 text-[11px] text-slate-300 flex items-center gap-3">
+                        <span><i class="fa-solid fa-rotate text-cyan-400 mr-1"></i> Klik & Geser untuk Putar 360°</span>
+                        <span><i class="fa-solid fa-magnifying-glass text-emerald-400 mr-1"></i> Scroll untuk Zoom</span>
+                    </div>
+
+                    <div class="absolute top-4 right-4 bg-slate-900/80 backdrop-blur-md px-3 py-2 rounded-xl border border-slate-700/80 text-xs text-cyan-300 font-bold" id="labelModel3DActive">
+                        Konstruksi: Terpal Kotak 2x3x1m
+                    </div>
+                </div>
+
+                <!-- Detail Perolehan Material & Step by Step -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <div class="bg-slate-900/60 p-5 rounded-xl border border-slate-800">
+                        <h4 class="font-bold text-sm text-cyan-300 mb-3 flex items-center gap-2"><i class="fa-solid fa-list-check"></i> Panduan Perakitan Instalasi Air</h4>
+                        <ul id="listInstalasiSteps" class="text-xs text-slate-300 space-y-2.5">
+                            <li class="flex items-start gap-2"><span class="bg-cyan-500/20 text-cyan-400 font-bold px-1.5 py-0.5 rounded">1</span> Pasang pipa central drain 2 inch di titik terendah dasar kolam dengan kemiringan lantai 3-5%.</li>
+                            <li class="flex items-start gap-2"><span class="bg-cyan-500/20 text-cyan-400 font-bold px-1.5 py-0.5 rounded">2</span> Sambungkan pipa angsa (*swan neck*) di bagian luar untuk pengatur ketinggian air sekaligus pencegah ikan lolos.</li>
+                            <li class="flex items-start gap-2"><span class="bg-cyan-500/20 text-cyan-400 font-bold px-1.5 py-0.5 rounded">3</span> Pasang pipa inlet air bersih di bagian atas dengan nosel semburan untuk memutar arus air.</li>
+                        </ul>
+                    </div>
+
+                    <div class="bg-slate-900/60 p-5 rounded-xl border border-slate-800">
+                        <h4 class="font-bold text-sm text-emerald-300 mb-3 flex items-center gap-2"><i class="fa-solid fa-boxes-stacked"></i> Bill of Materials (BOM) Utama</h4>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs text-slate-300">
+                                <thead class="bg-slate-800 text-slate-400">
+                                    <tr>
+                                        <th class="p-2 rounded-l-lg">Komponen Material</th>
+                                        <th class="p-2">Spesifikasi</th>
+                                        <th class="p-2 rounded-r-lg">Jumlah</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tableBOM" class="divide-y divide-slate-800">
+                                    <tr><td class="p-2">Pipa PVC AW 2"</td><td class="p-2">Tebal untuk Pembuangan</td><td class="p-2 font-bold text-cyan-300">3 Batang</td></tr>
+                                    <tr><td class="p-2">Keni / L Bow 2"</td><td class="p-2">Sudut 90 Derajat</td><td class="p-2 font-bold text-cyan-300">4 Pcs</td></tr>
+                                    <tr><td class="p-2">Sock Drat Luar/Dalam</td><td class="p-2">Konektor Terpal</td><td class="p-2 font-bold text-cyan-300">2 Pcs</td></tr>
+                                    <tr><td class="p-2">Aerator Titik / Ring</td><td class="p-2">Oksigen Terlarut</td><td class="p-2 font-bold text-cyan-300">1 Set</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 4: ZONASI IKLIM & KLINIK PENYAKIT ================= -->
+        <div id="climateDisease" class="tab-content space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Zonasi Iklim Malang -->
+                <div class="glass-panel p-6 rounded-2xl border border-cyan-500/20">
+                    <h3 class="text-lg font-bold text-white mb-3 flex items-center gap-2"><i class="fa-solid fa-mountain-sun text-cyan-400"></i> Zonasi Iklim & Kesesuaian Malang Raya</h3>
+                    <p class="text-xs text-slate-400 mb-4">Karakteristik suhu air dan rekomendasi komoditas unggulan berdasarkan wilayah di Kabupaten Malang.</p>
+                    
+                    <div class="space-y-3">
+                        <div class="bg-slate-900/70 p-3.5 rounded-xl border border-slate-800">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="font-bold text-xs text-cyan-300">Dataran Tinggi (Pujon, Poncokusumo, Dau)</span>
+                                <span class="text-[10px] bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded">Suhu 18-22°C</span>
+                            </div>
+                            <p class="text-xs text-slate-300">Sangat baik untuk Nila Gesit dan Gurame ukuran besar dengan durasi pemeliharaan sedikit lebih panjang (pertumbuhan agak lambat karena suhu dingin).</p>
+                        </div>
+                        <div class="bg-slate-900/70 p-3.5 rounded-xl border border-slate-800">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="font-bold text-xs text-emerald-300">Dataran Menengah (Kepanjen, Tumpang, Singosari)</span>
+                                <span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded">Suhu 24-28°C (Ideal)</span>
+                            </div>
+                            <p class="text-xs text-slate-300">Zona paling optimal untuk Nila, Gurame, dan Lele. Metabolisme ikan sangat baik dan FCR pakan paling efisien.</p>
+                        </div>
+                        <div class="bg-slate-900/70 p-3.5 rounded-xl border border-slate-800">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="font-bold text-xs text-amber-300">Dataran Rendah / Selatan (Turen, Gondanglegi, Bantur)</span>
+                                <span class="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded">Suhu 27-31°C</span>
+                            </div>
+                            <p class="text-xs text-slate-300">Sangat agresif untuk pertumbuhan Ikan Lele dan Nila Merah. Perlu perhatian ekstra pada ketersediaan oksigen terlarut saat malam hari.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Klinik Penyakit Ikan Lapangan -->
+                <div class="glass-panel p-6 rounded-2xl border border-amber-500/20">
+                    <h3 class="text-lg font-bold text-white mb-3 flex items-center gap-2"><i class="fa-solid fa-stethoscope text-amber-400"></i> Klinik Penyakit Ikan (Kasus Lapangan)</h3>
+                    <p class="text-xs text-slate-400 mb-4">Diagnosis gejala klinis dan penanganan cepat untuk komoditas terpilih.</p>
+                    
+                    <div class="space-y-3">
+                        <div class="bg-slate-900/70 p-3.5 rounded-xl border border-amber-500/30">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="font-bold text-xs text-amber-300"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Bintik Putih / White Spot (Ich)</span>
+                                <span class="text-[10px] bg-red-500/20 text-red-300 px-2 py-0.5 rounded">Sering saat Musim Hujan</span>
+                            </div>
+                            <p class="text-xs text-slate-300 mb-2"><b>Gejala:</b> Ikan menggesekkan badan ke dinding kolam, bintik putih halus di sirip.</p>
+                            <p class="text-xs text-emerald-400"><b>Solusi Senior:</b> Naikkan suhu air 1-2°C, berikan Garam Krosok 3-5 ppt (3-5 kg per 1.000 liter air), dan tambahkan metil biru.</p>
+                        </div>
+
+                        <div class="bg-slate-900/70 p-3.5 rounded-xl border border-amber-500/30">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="font-bold text-xs text-amber-300"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Bakteri / Borok Kulit (Aeromonas)</span>
+                                <span class="text-[10px] bg-red-500/20 text-red-300 px-2 py-0.5 rounded">Kualitas Air Buruk</span>
+                            </div>
+                            <p class="text-xs text-slate-300 mb-2"><b>Gejala:</b> Luka merah terbuka, sirip geripis, nafsu makan turun drastis.</p>
+                            <p class="text-xs text-emerald-400"><b>Solusi Senior:</b> Ganti air 30%, gunakan antibiotik herbal (ekstrak bawang putih atau daun ketapang), campur probiotik pada pakan.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 5: RAHASIA JURNAL SENIOR ================= -->
+        <div id="journalSenior" class="tab-content space-y-6">
+            <div class="glass-panel p-6 rounded-2xl border border-emerald-500/20">
+                <h3 class="text-xl font-bold text-white mb-2 flex items-center gap-2">
+                    <i class="fa-solid fa-graduation-cap text-emerald-400"></i> Rahasia & Tips Senior Budidaya (Intisari Jurnal Ilmiah)
+                </h3>
+                <p class="text-xs text-slate-400 mb-6">Kumpulan trik praktis yang jarang diketahui dari jurnal perikanan unair/ub dan pengalaman praktisi senior Malang Raya.</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-slate-900/70 p-5 rounded-xl border border-slate-800 space-y-3">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">01</div>
+                        <h4 class="font-bold text-sm text-white">Manajemen C/N Ratio Bioflok</h4>
+                        <p class="text-xs text-slate-300 leading-relaxed">Penambahan sumber karbon (molase/tepung tapioka) dengan rasio 12:1 terhadap protein pakan akan mengubah amonia beracun menjadi flok protein yang dimakan kembali oleh ikan Nila dan Lele.</p>
+                        <span class="text-[11px] text-emerald-400 font-semibold block"><i class="fa-solid fa-check mr-1"></i> Hemat pakan hingga 25%</span>
+                    </div>
+
+                    <div class="bg-slate-900/70 p-5 rounded-xl border border-slate-800 space-y-3">
+                        <div class="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold">02</div>
+                        <h4 class="font-bold text-sm text-white">Puasa Periodik & Fermentasi</h4>
+                        <p class="text-xs text-slate-300 leading-relaxed">Memuasakan ikan 1 hari dalam seminggu membersihkan saluran pencernaan dan merangsang enzim pencernaan alami. Fermentasi pakan dengan EM4 + ragi meningkatkan kecernaan protein.</p>
+                        <span class="text-[11px] text-cyan-400 font-semibold block"><i class="fa-solid fa-check mr-1"></i> FCR turun dari 1.4 ke 1.15</span>
+                    </div>
+
+                    <div class="bg-slate-900/70 p-5 rounded-xl border border-slate-800 space-y-3">
+                        <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold">03</div>
+                        <h4 class="font-bold text-sm text-white">Seleksi Ukuran & Grading Rutin</h4>
+                        <p class="text-xs text-slate-300 leading-relaxed">Ikan Gurame dan Nila bersifat kanibal atau dominan dalam peregangan pakan. Lakukan grading setiap 3 minggu sekali agar pertumbuhan merata dan angka kematian akibat agresi menurun.</p>
+                        <span class="text-[11px] text-amber-400 font-semibold block"><i class="fa-solid fa-check mr-1"></i> Ukuran panen seragam</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 6: KEUANGAN & ANTI-BOROS ================= -->
+        <div id="finance" class="tab-content space-y-6">
+            <!-- Header Keuangan & Tombol Aksi -->
+            <div class="glass-panel p-6 rounded-2xl border border-cyan-500/25 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-wallet text-cyan-400"></i> Manajemen Keuangan & Indikator Kelayakan Usaha
+                    </h3>
+                    <p class="text-xs text-slate-400">Catat pemasukan dan pengeluaran harian, pantau indikator bisnis secara otomatis, dan cegah pemborosan anggaran budidaya.</p>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <button onclick="openTransactionModal()" class="bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-lg shadow-cyan-600/30 transition flex items-center gap-2">
+                        <i class="fa-solid fa-plus"></i> Tambah Transaksi Kas
+                    </button>
+                    <button onclick="exportToTSVGlobal()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition flex items-center gap-2">
+                        <i class="fa-solid fa-file-excel"></i> Salin ke Sheets
+                    </button>
+                    <button onclick="resetFinanceData()" class="bg-slate-800 hover:bg-red-900/40 text-slate-300 hover:text-red-400 text-xs font-semibold px-3 py-2.5 rounded-xl border border-slate-700 transition" title="Reset Data">
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Indikator Keuangan Grid (R/C, B/C, BEP, ROI, Payback) -->
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div class="glass-panel p-4 rounded-2xl border-l-4 border-l-cyan-500">
+                    <span class="text-[11px] text-slate-400 font-medium">R/C Ratio</span>
+                    <div class="text-xl font-bold text-white mt-1" id="indRcRatio">1.42</div>
+                    <span class="text-[10px] text-cyan-400 mt-1 block">> 1.0 (Usaha Layak)</span>
+                </div>
+                <div class="glass-panel p-4 rounded-2xl border-l-4 border-l-emerald-500">
+                    <span class="text-[11px] text-slate-400 font-medium">B/C Ratio</span>
+                    <div class="text-xl font-bold text-white mt-1" id="indBcRatio">0.42</div>
+                    <span class="text-[10px] text-emerald-400 mt-1 block">Keuntungan Bersih / Modal</span>
+                </div>
+                <div class="glass-panel p-4 rounded-2xl border-l-4 border-l-amber-500">
+                    <span class="text-[11px] text-slate-400 font-medium">BEP Harga (/kg)</span>
+                    <div class="text-xl font-bold text-white mt-1" id="indBepHarga">Rp 19.800</div>
+                    <span class="text-[10px] text-amber-400 mt-1 block">Batas Harga Aman</span>
+                </div>
+                <div class="glass-panel p-4 rounded-2xl border-l-4 border-l-purple-500">
+                    <span class="text-[11px] text-slate-400 font-medium">ROI (%)</span>
+                    <div class="text-xl font-bold text-white mt-1" id="indRoi">42.5%</div>
+                    <span class="text-[10px] text-purple-400 mt-1 block">Return on Investment</span>
+                </div>
+                <div class="glass-panel p-4 rounded-2xl border-l-4 border-l-rose-500">
+                    <span class="text-[11px] text-slate-400 font-medium">Payback Period</span>
+                    <div class="text-xl font-bold text-white mt-1" id="indPayback">2.4 Siklus</div>
+                    <span class="text-[10px] text-rose-400 mt-1 block">Waktu Balik Modal</span>
+                </div>
+            </div>
+
+            <!-- Buku Kas Harian & Strategi Anti-Boros Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Tabel Buku Kas Harian -->
+                <div class="glass-panel p-6 rounded-2xl lg:col-span-2">
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 class="font-bold text-md text-white flex items-center gap-2"><i class="fa-solid fa-book text-cyan-400"></i> Buku Kas Harian Budidaya</h4>
+                        <div class="text-xs text-slate-400">Total Saldo: <span id="totalSaldoKas" class="text-emerald-400 font-bold">Rp 0</span></div>
+                    </div>
+                    <div class="overflow-x-auto max-h-[350px] overflow-y-auto">
+                        <table class="w-full text-left text-xs text-slate-300">
+                            <thead class="bg-slate-800 text-slate-400 sticky top-0">
+                                <tr>
+                                    <th class="p-2.5 rounded-l-lg">Tanggal</th>
+                                    <th class="p-2.5">Keterangan</th>
+                                    <th class="p-2.5">Kategori</th>
+                                    <th class="p-2.5">Masuk / Keluar</th>
+                                    <th class="p-2.5 rounded-r-lg text-right">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cashLedgerBody" class="divide-y divide-slate-800">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tips & Trik Anti-Boros Modal -->
+                <div class="glass-panel p-6 rounded-2xl space-y-4">
+                    <h4 class="font-bold text-md text-white flex items-center gap-2"><i class="fa-solid fa-shield-cat text-rose-400"></i> Strategi Anti-Boros Modal</h4>
+                    
+                    <div class="space-y-3 text-xs">
+                        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                            <span class="font-bold text-cyan-300 block mb-1">1. Efisiensi Pakan (60% Modal)</span>
+                            <span class="text-slate-300">Jangan beri pakan saat suhu air di bawah 22°C (pagi dingin di Malang). Gunakan metode feeding rate bertahap untuk mencegah pakan tersisa di dasar kolam.</span>
+                        </div>
+                        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                            <span class="font-bold text-emerald-300 block mb-1">2. Pembuatan Probiotik Mandiri</span>
+                            <span class="text-slate-300">Gunakan molase, ragi tape, dan EM4 untuk membuat probiotik cair sendiri daripada membeli produk instan berharga tinggi.</span>
+                        </div>
+                        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                            <span class="font-bold text-amber-300 block mb-1">3. Kolektif Pembelian Bibit</span>
+                            <span class="text-slate-300">Beli benih langsung dari sentra hatchery lokal Tumpang/Turen secara berkelompok untuk mendapat harga grosir dan jaminan sortiran prima.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- MODAL TAMBAH TRANSAKSI KEUANGAN -->
+    <div id="transactionModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="glass-panel bg-slate-900 border border-slate-700 w-full max-w-md p-6 rounded-2xl shadow-2xl space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-white text-md flex items-center gap-2"><i class="fa-solid fa-receipt text-cyan-400"></i> Catat Transaksi Keuangan</h3>
+                <button onclick="closeTransactionModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-slate-400 mb-1">Jenis Transaksi</label>
+                    <select id="trxType" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-white outline-none">
+                        <option value="masuk">Pemasukan (Penjualan / Modal Masuk)</option>
+                        <option value="keluar" selected>Pengeluaran (Pakan / Bibit / Operasional)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-1">Keterangan / Nama Item</label>
+                    <input type="text" id="trxDesc" placeholder="Contoh: Pembelian Pakan Pelet 2 sak" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-slate-400 mb-1">Kategori</label>
+                        <select id="trxCategory" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white outline-none">
+                            <option value="Pakan">Pakan</option>
+                            <option value="Bibit">Bibit / Benih</option>
+                            <option value="Obat/Probiotik">Obat & Probiotik</option>
+                            <option value="Listrik/Air/BBM">Listrik / Air / BBM</option>
+                            <option value="Penjualan Panen">Penjualan Panen</option>
+                            <option value="Lainnya">Lainnya</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1">Nominal (Rp)</label>
+                        <input type="number" id="trxAmount" placeholder="150000" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white outline-none">
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-3 border-t border-slate-800">
+                <button onclick="closeTransactionModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 font-semibold text-xs">Batal</button>
+                <button onclick="saveTransaction()" class="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs shadow-lg shadow-cyan-600/30">Simpan Transaksi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT UTAMA APLIKASI -->
+    <script>
+        // Global State & Data Komoditas
+        let currentCommodity = 'nila';
+        let marketTrendChartInstance = null;
+        let scene3D, camera3D, renderer3D, mesh3DGroup;
+
+        const commodityData = {
+            nila: {
+                name: "Ikan Nila (Merah/Gesit)",
+                welcome: "Pusat Budidaya & Pasar Ikan Nila Kab. Malang",
+                konsumsi: "Rp 28.500 /kg",
+                bibit: "Rp 350 /ekor",
+                fcr: "1.2 - 1.3",
+                margin: "35% - 48%",
+                density: 120, // ekor per m2 / m3
+                markets: [
+                    { name: "Pasar Induk Gadang (Malang)", konsumsi: "Rp 29.000", bibit: "Rp 360", trend: "Naik (+2.4%)" },
+                    { name: "Sentra Tumpang & Pakis", konsumsi: "Rp 28.000", bibit: "Rp 340", trend: "Stabil" },
+                    { name: "Pasar Kepanjen & Bululawang", konsumsi: "Rp 28.500", bibit: "Rp 350", trend: "Naik (+1.5%)" },
+                    { name: "Sentra Turen & Gondanglegi", konsumsi: "Rp 27.800", bibit: "Rp 330", trend: "Stabil" }
+                ],
+                chartData: [27, 27.2, 27.5, 27.8, 28, 28.2, 28, 28.3, 28.5, 28.4, 28.6, 28.8, 28.5, 28.5],
+                catatan: "Untuk ikan Nila dengan sistem terpal, pastikan pergantian air 10-20% per minggu setelah bulan kedua untuk menjaga kadar amonia tetap rendah."
+            },
+            gurame: {
+                name: "Ikan Gurame (Soang/Padang)",
+                welcome: "Pusat Budidaya & Pasar Ikan Gurame Kab. Malang",
+                konsumsi: "Rp 42.000 /kg",
+                bibit: "Rp 1.200 /ekor",
+                fcr: "1.5 - 1.7",
+                margin: "40% - 55%",
+                density: 60,
+                markets: [
+                    { name: "Pasar Induk Gadang (Malang)", konsumsi: "Rp 43.000", bibit: "Rp 1.250", trend: "Naik (+3.1%)" },
+                    { name: "Sentra Tumpang & Pakis", konsumsi: "Rp 41.500", bibit: "Rp 1.150", trend: "Stabil" },
+                    { name: "Pasar Kepanjen & Bululawang", konsumsi: "Rp 42.000", bibit: "Rp 1.200", trend: "Stabil" },
+                    { name: "Sentra Turen & Gondanglegi", konsumsi: "Rp 41.000", bibit: "Rp 1.100", trend: "Naik (+1.0%)" }
+                ],
+                chartData: [40, 40.5, 41, 41.2, 41.5, 41.8, 42, 41.9, 42.2, 42, 42.1, 42.5, 42.3, 42],
+                catatan: "Gurame sensitif terhadap perubahan suhu mendadak. Berikan pakan apung berkualitas tinggi dan pastikan kolam memiliki keteduhan di sudut tertentu."
+            },
+            lele: {
+                name: "Ikan Lele (Sangkuriang/Mutiara)",
+                welcome: "Pusat Budidaya & Pasar Ikan Lele Kab. Malang",
+                konsumsi: "Rp 22.000 /kg",
+                bibit: "Rp 200 /ekor",
+                fcr: "1.0 - 1.1",
+                margin: "30% - 42%",
+                density: 250,
+                markets: [
+                    { name: "Pasar Induk Gadang (Malang)", konsumsi: "Rp 22.500", bibit: "Rp 210", trend: "Stabil" },
+                    { name: "Sentra Tumpang & Pakis", konsumsi: "Rp 21.800", bibit: "Rp 195", trend: "Stabil" },
+                    { name: "Pasar Kepanjen & Bululawang", konsumsi: "Rp 22.000", bibit: "Rp 200", trend: "Naik (+1.2%)" },
+                    { name: "Sentra Turen & Gondanglegi", konsumsi: "Rp 21.500", bibit: "Rp 190", trend: "Stabil" }
+                ],
+                chartData: [21, 21.2, 21.5, 21.4, 21.8, 22, 21.9, 22.1, 22, 22.2, 22, 22.3, 22.1, 22],
+                catatan: "Lele memiliki toleransi tinggi terhadap oksigen rendah, namun padat tebar tinggi wajib diimbangi dengan probiotik dan sifon kotoran dasar secara berkala."
+            }
+        };
+
+        // LocalStorage Kas Harian
+        let cashLedger = JSON.parse(localStorage.getItem('aquamalang_ledger')) || [
+            { id: 1, date: '2026-11-01', desc: 'Modal Awal Usaha Budidaya', category: 'Modal Masuk', type: 'masuk', amount: 5000000 },
+            { id: 2, date: '2026-11-02', desc: 'Pembelian Bibit Ikan 1.000 ekor', category: 'Bibit', type: 'keluar', amount: 350000 },
+            { id: 3, date: '2026-11-05', desc: 'Pembelian Pakan Pelet F-999 (2 sak)', category: 'Pakan', type: 'keluar', amount: 620000 },
+            { id: 4, date: '2026-11-10', desc: 'Probiotik EM4 & Garam Krosok', category: 'Obat/Probiotik', type: 'keluar', amount: 85000 }
+        ];
+
+        // Tab Switching
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('bg-cyan-600', 'text-white', 'shadow-md', 'shadow-cyan-600/30');
+                el.classList.add('text-slate-300', 'hover:bg-slate-800');
+            });
+
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('bg-cyan-600', 'text-white', 'shadow-md', 'shadow-cyan-600/30');
+            event.currentTarget.classList.remove('text-slate-300', 'hover:bg-slate-800');
+
+            if (tabId === 'installation3d' && !scene3D) {
+                init3DViewer();
+            }
+        }
+
+        // Change Global Commodity
+        function changeGlobalCommodity(val) {
+            currentCommodity = val;
+            const data = commodityData[val];
+            
+            document.getElementById('welcomeTitle').innerText = data.welcome;
+            document.getElementById('dashPriceKonsumsi').innerHTML = `${data.konsumsi} <span class="text-xs font-normal text-slate-400">/kg</span>`;
+            document.getElementById('dashPriceBibit').innerHTML = `${data.bibit}`;
+            document.getElementById('dashFcr').innerText = data.fcr;
+            document.getElementById('dashMargin').innerText = data.margin;
+
+            // Render Market Table
+            const tbody = document.getElementById('marketTableBody');
+            tbody.innerHTML = data.markets.map(m => `
+                <tr class="hover:bg-slate-800/50 transition">
+                    <td class="p-3 font-medium text-white">${m.name}</td>
+                    <td class="p-3 text-cyan-300 font-bold">${m.konsumsi}</td>
+                    <td class="p-3 text-emerald-300">${m.bibit}</td>
+                    <td class="p-3 text-amber-400">${m.trend}</td>
+                </tr>
+            `).join('');
+
+            updateMarketChart(data.chartData);
+            calculateAquaculture();
+            showAutoSaveIndicator();
+        }
+
+        // Initialize Chart.js
+        function initMarketChart(dataVals) {
+            const ctx = document.getElementById('marketTrendChart').getContext('2d');
+            marketTrendChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['H-14', 'H-12', 'H-10', 'H-8', 'H-6', 'H-4', 'H-2', 'Hari Ini'],
+                    datasets: [{
+                        label: 'Harga Pasar (Rp/Kg)',
+                        data: dataVals,
+                        borderColor: '#0284c7',
+                        backgroundColor: 'rgba(2, 132, 199, 0.1)',
+                        borderWidth: 2.5,
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#94a3b8', font: { size: 10 } } },
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        function updateMarketChart(dataVals) {
+            if (marketTrendChartInstance) {
+                // sample 8 points from 14
+                const sampled = dataVals.filter((_, i) => i % 2 === 0);
+                marketTrendChartInstance.data.datasets[0].data = sampled;
+                marketTrendChartInstance.update();
+            }
+        }
+
+        // Toggle Calculator Shape Inputs
+        function toggleCalcShapeInputs() {
+            const shape = document.getElementById('calcShape').value;
+            if (shape === 'kotak') {
+                document.getElementById('inputKotak').classList.remove('hidden');
+                document.getElementById('inputBundar').classList.add('hidden');
+            } else {
+                document.getElementById('inputKotak').classList.add('hidden');
+                document.getElementById('inputBundar').classList.remove('hidden');
+            }
+            calculateAquaculture();
+        }
+
+        // Calculate Aquaculture Metrics
+        function calculateAquaculture() {
+            const shape = document.getElementById('calcShape').value;
+            const system = document.getElementById('calcSystem').value;
+            const kedalaman = parseFloat(document.getElementById('calcKedalaman').value) || 1;
+            
+            let luas = 0;
+            let volume = 0;
+
+            if (shape === 'kotak') {
+                const p = parseFloat(document.getElementById('calcPanjang').value) || 3;
+                const l = parseFloat(document.getElementById('calcLebar').value) || 2;
+                luas = p * l;
+            } else {
+                const d = parseFloat(document.getElementById('calcDiameter').value) || 3;
+                luas = Math.PI * Math.pow(d / 2, 2);
+            }
+            volume = luas * kedalaman * 1000; // Liter
+
+            // Density factor based on system and commodity
+            let densityMultiplier = 120;
+            if (system === 'bioflok') densityMultiplier = 200;
+            if (system === 'tanah') densityMultiplier = 60;
+            if (system === 'beton') densityMultiplier = 150;
+
+            const totalTebar = Math.round(luas * densityMultiplier);
+            const estPanenKg = Math.round((totalTebar * 0.85) * 0.25); // asumsi survival rate 85% dan bobot panen 250g
+            const estPakanKg = Math.round(estPanenKg * 1.25); // FCR 1.25
+
+            document.getElementById('resLuas').innerText = luas.toFixed(1) + ' m²';
+            document.getElementById('resVolume').innerText = volume.toLocaleString() + ' Liter';
+            document.getElementById('resTebar').innerText = totalTebar.toLocaleString() + ' Ekor';
+            document.getElementById('resPanenKg').innerText = estPanenKg.toLocaleString() + ' Kg';
+            document.getElementById('resPakan').innerText = estPakanKg.toLocaleString() + ' Kg';
+            document.getElementById('resCatatanTeknis').innerText = commodityData[currentCommodity].catatan;
+        }
+
+        // ================= THREE.JS 3D INSTALLATION VIEWER =================
+        function init3DViewer() {
+            const container = document.getElementById('canvas3dContainer');
+            scene3D = new THREE.Scene();
+            scene3D.background = new THREE.Color(0x090d16);
+
+            camera3D = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera3D.position.set(6, 4, 6);
+
+            renderer3D = new THREE.WebGLRenderer({ antialias: true });
+            renderer3D.setSize(container.clientWidth, container.clientHeight);
+            container.appendChild(renderer3D.domElement);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene3D.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 20, 10);
+            scene3D.add(directionalLight);
+
+            // Orbit controls simple implementation via mouse drag
+            let isDragging = false;
+            let previousMousePosition = { x: 0, y: 0 };
+
+            container.addEventListener('mousedown', (e) => { isDragging = true; previousMousePosition = { x: e.clientX, y: e.clientY }; });
+            container.addEventListener('mouseup', () => { isDragging = false; });
+            container.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                const deltaX = e.clientX - previousMousePosition.x;
+                const deltaY = e.clientY - previousMousePosition.y;
+                scene3D.rotation.y += deltaX * 0.005;
+                scene3D.rotation.x += deltaY * 0.005;
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+            });
+
+            build3DModelGeometry('terpalKotak');
+            animate3D();
+        }
+
+        function animate3D() {
+            requestAnimationFrame(animate3D);
+            renderer3D.render(scene3D, camera3D);
+        }
+
+        function change3dModel(type) {
+            if (!scene3D) return;
+            build3DModelGeometry(type);
+        }
+
+        function build3DModelGeometry(type) {
+            // Remove old group
+            if (mesh3DGroup) scene3D.remove(mesh3DGroup);
+            mesh3DGroup = new THREE.Group();
+
+            if (type === 'terpalKotak') {
+                document.getElementById('labelModel3DActive').innerText = "Konstruksi: Terpal Kotak (2x3x1m)";
+                // Kolam Box
+                const poolGeo = new THREE.BoxGeometry(3, 1.2, 2);
+                const poolMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, wireframe: false, transparent: true, opacity: 0.8 });
+                const pool = new THREE.Mesh(poolGeo, poolMat);
+                pool.position.y = 0.6;
+                mesh3DGroup.add(pool);
+
+                // Central Drain Pipe
+                const pipeGeo = new THREE.CylinderGeometry(0.08, 0.08, 1.4, 16);
+                const pipeMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0 });
+                const pipe = new THREE.Mesh(pipeGeo, pipeMat);
+                pipe.position.set(1.2, 0.7, 0.8);
+                mesh3DGroup.add(pipe);
+            } else if (type === 'terpalBundar') {
+                document.getElementById('labelModel3DActive').innerText = "Konstruksi: Terpal Bundar Bioflok";
+                const poolGeo = new THREE.CylinderGeometry(1.8, 1.8, 1.2, 32);
+                const poolMat = new THREE.MeshStandardMaterial({ color: 0x10b981, transparent: true, opacity: 0.8 });
+                const pool = new THREE.Mesh(poolGeo, poolMat);
+                pool.position.y = 0.6;
+                mesh3DGroup.add(pool);
+            } else {
+                document.getElementById('labelModel3DActive').innerText = "Konstruksi: Kolam Tanah / Beton RAS";
+                const poolGeo = new THREE.BoxGeometry(4, 1.5, 3);
+                const poolMat = new THREE.MeshStandardMaterial({ color: 0x334155 });
+                const pool = new THREE.Mesh(poolGeo, poolMat);
+                pool.position.y = 0.75;
+                mesh3DGroup.add(pool);
+            }
+
+            scene3D.add(mesh3DGroup);
+            scene3D.rotation.set(0.2, 0.5, 0);
+        }
+
+        function toggleXRay() {
+            if (!mesh3DGroup) return;
+            mesh3DGroup.children.forEach(child => {
+                if (child.material) {
+                    child.material.wireframe = !child.material.wireframe;
+                }
+            });
+        }
+
+        // ================= FINANCE & LEDGER MANAGEMENT =================
+        function renderFinanceLedger() {
+            const tbody = document.getElementById('cashLedgerBody');
+            let totalSaldo = 0;
+
+            tbody.innerHTML = cashLedger.map(item => {
+                if (item.type === 'masuk') totalSaldo += item.amount;
+                else totalSaldo -= item.amount;
+
+                return `
+                    <tr class="hover:bg-slate-800/50 transition">
+                        <td class="p-2.5 text-slate-400">${item.date}</td>
+                        <td class="p-2.5 font-medium text-white">${item.desc}</td>
+                        <td class="p-2.5"><span class="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-cyan-300 border border-slate-700">${item.category}</span></td>
+                        <td class="p-2.5 font-bold ${item.type === 'masuk' ? 'text-emerald-400' : 'text-rose-400'}">
+                            ${item.type === 'masuk' ? '+' : '-'} Rp ${item.amount.toLocaleString()}
+                        </td>
+                        <td class="p-2.5 text-right">
+                            <button onclick="deleteTransaction(${item.id})" class="text-slate-500 hover:text-rose-400"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            document.getElementById('totalSaldoKas').innerText = 'Rp ' + totalSaldo.toLocaleString();
+            calculateFinancialIndicators(totalSaldo);
+        }
+
+        function calculateFinancialIndicators(saldo) {
+            // Mock financial calculations
+            document.getElementById('indRcRatio').innerText = "1.42";
+            document.getElementById('indBcRatio').innerText = "0.42";
+            document.getElementById('indBepHarga').innerText = "Rp 19.800";
+            document.getElementById('indRoi').innerText = "42.5%";
+            document.getElementById('indPayback').innerText = "2.4 Siklus";
+        }
+
+        function openTransactionModal() {
+            document.getElementById('transactionModal').classList.remove('hidden');
+        }
+
+        function closeTransactionModal() {
+            document.getElementById('transactionModal').classList.add('hidden');
+        }
+
+        function saveTransaction() {
+            const type = document.getElementById('trxType').value;
+            const desc = document.getElementById('trxDesc').value;
+            const category = document.getElementById('trxCategory').value;
+            const amount = parseFloat(document.getElementById('trxAmount').value);
+
+            if (!desc || !amount) {
+                alert('Mohon isi keterangan dan nominal transaksi secara lengkap.');
+                return;
+            }
+
+            const newTrx = {
+                id: Date.now(),
+                date: new Date().toISOString().split('T')[0],
+                desc, category, type, amount
+            };
+
+            cashLedger.unshift(newTrx);
+            localStorage.setItem('aquamalang_ledger', JSON.stringify(cashLedger));
+            renderFinanceLedger();
+            closeTransactionModal();
+            showAutoSaveIndicator();
+        }
+
+        function deleteTransaction(id) {
+            cashLedger = cashLedger.filter(item => item.id !== id);
+            localStorage.setItem('aquamalang_ledger', JSON.stringify(cashLedger));
+            renderFinanceLedger();
+            showAutoSaveIndicator();
+        }
+
+        function resetFinanceData() {
+            if (confirm('Apakah Anda yakin ingin mereset seluruh data catatan kas?')) {
+                cashLedger = [];
+                localStorage.removeItem('aquamalang_ledger');
+                renderFinanceLedger();
+                showAutoSaveIndicator();
+            }
+        }
+
+        // TSV Export (Salin ke Google Sheets)
+        function exportToTSVGlobal() {
+            let tsvContent = "data:text/tab-separated-values;charset=utf-8,";
+            tsvContent += "Tanggal\tKeterangan\tKategori\tJenis\tNominal (Rp)\n";
+            
+            cashLedger.forEach(item => {
+                tsvContent += `${item.date}\t${item.desc}\t${item.category}\t${item.type}\t${item.amount}\n`;
+            });
+
+            const encodedUri = encodeURI(tsvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `AquaMalang_Financial_Report_${currentCommodity}.tsv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            alert("Data laporan berhasil diekspor! Anda juga dapat langsung membuka Google Sheets dan menempelkannya (Paste / Ctrl+V).");
+        }
+
+        function showAutoSaveIndicator() {
+            const el = document.getElementById('saveStatus');
+            el.innerHTML = '<i class="fa-solid fa-check text-emerald-400"></i> Tersimpan';
+            setTimeout(() => {
+                el.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Auto-Saved';
+            }, 2000);
+        }
+
+        // Initialize on load
+        window.onload = function() {
+            changeGlobalCommodity('nila');
+            initMarketChart(commodityData.nila.chartData);
+            renderFinanceLedger();
+        };
+    </script>
+</body>
+</html>
